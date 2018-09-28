@@ -6,3 +6,6 @@ authors = ["Tock Project Developers <tock-dev@googlegroups.com>"]
 [dependencies]
 cortexm4 = { path = "../../arch/cortex-m4" }
 kernel = { path = "../../kernel" }
+# enum_primitive-rs original does not have proper nostd compilation at the moment
+num-traits = { version = "0.2", default-features = false }
+enum_primitive = { git = "https://github.com/lthiery/enum_primitive-rs" }
