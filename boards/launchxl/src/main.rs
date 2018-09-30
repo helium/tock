@@ -360,7 +360,7 @@ pub unsafe fn reset_handler() {
     }
 
     let ipc = &kernel::ipc::IPC::new(board_kernel, &memory_allocation_capability);
-
+    //debug!("Loading processes");
     kernel::procs::load_processes(
         board_kernel,
         &cortexm4::syscall::SysCall::new(),

@@ -67,7 +67,7 @@ pub unsafe extern "C" fn generic_isr() {
         "
     /* Skip saving process state if not coming from user-space */
     cmp lr, #0xfffffffd
-    bne _ggeneric_isr_no_stacking
+    bne 1f
 
     /* We need the most recent kernel's version of r1, which points */
     /* to the Process struct's stored registers field. The kernel's r1 */
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn generic_isr() {
 
     movw LR, #0xFFF9
     movt LR, #0xFFFF
-  _ggeneric_isr_no_stacking:
+  1:
     /* Find the ISR number by looking at the low byte of the IPSR registers */
     mrs r0, IPSR
     and r0, #0xff
