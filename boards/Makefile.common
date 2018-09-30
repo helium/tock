@@ -122,10 +122,10 @@ clean::
 	$(Q)$(CARGO) clean $(VERBOSE)
 
 .PHONY: release
-release: target/$(TARGET)/release/$(PLATFORM).bin
+release: target/$(TARGET)/release/$(PLATFORM).bin target/$(TARGET)/release/$(PLATFORM).elf
 
 .PHONY: debug
-debug: target/$(TARGET)/debug/$(PLATFORM).bin
+debug: target/$(TARGET)/debug/$(PLATFORM).bin target/$(TARGET)/debug/$(PLATFORM).elf
 
 .PHONY: debug-lst
 debug-lst: target/$(TARGET)/debug/$(PLATFORM).lst
@@ -138,7 +138,7 @@ doc: | target
 lst: target/$(TARGET)/release/$(PLATFORM).lst
 
 .PHONY: release
-release: target/$(TARGET)/release/$(PLATFORM).bin
+release: target/$(TARGET)/release/$(PLATFORM).bin target/$(TARGET)/release/$(PLATFORM).elf
 
 
 # Support rules
