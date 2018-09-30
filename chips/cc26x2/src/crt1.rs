@@ -1,4 +1,7 @@
-use cortexm4::{generic_isr, hard_fault_handler, nvic, svc_handler, systick_handler};
+use cortexm4::{
+    disable_specific_nvic, enter_kernel_space, generic_isr, hard_fault_handler, nvic, svc_handler,
+    systick_handler,
+};
 
 extern "C" {
     // Symbols defined in the linker file
@@ -18,9 +21,13 @@ use events;
 macro_rules! generic_isr {
     ($label:tt, $priority:expr) => {
         #[cfg(target_os = "none")]
+        #[naked]
         unsafe extern "C" fn $label() {
-            generic_isr();
+            enter_kernel_space();
+            //TODO: don't be interrupted by an interrupt
+            // ("cpsi/e i :: volatile" are not allowed to be called here)
             events::set_event_flag($priority);
+            disable_specific_nvic();
         }
     };
 }

@@ -1,4 +1,4 @@
-#![feature(const_fn, untagged_unions, used)]
+#![feature(const_fn, untagged_unions, used, asm, naked_functions)]
 #![no_std]
 #![crate_name = "cc26x2"]
 #![crate_type = "rlib"]

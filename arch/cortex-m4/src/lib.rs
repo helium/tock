@@ -56,12 +56,8 @@ pub unsafe extern "C" fn systick_handler() {
     );
 }
 
-#[cfg(not(target_os = "none"))]
-pub unsafe extern "C" fn generic_isr() {}
-
-#[cfg(target_os = "none")]
-#[naked]
 /// All ISRs are caught by this handler which disables the NVIC and switches to the kernel.
+#[naked]
 pub unsafe extern "C" fn generic_isr() {
     asm!(
         "
@@ -83,6 +79,72 @@ pub unsafe extern "C" fn generic_isr() {
     movw LR, #0xFFF9
     movt LR, #0xFFFF
   1:
+    /* Find the ISR number by looking at the low byte of the IPSR registers */
+    mrs r0, IPSR
+    and r0, #0xff
+    /* ISRs start at 16, so substract 16 to get zero-indexed */
+    sub r0, #16
+
+    /*
+     * High level:
+     *    NVIC.ICER[r0 / 32] = 1 << (r0 & 31)
+     * */
+    lsrs r2, r0, #5 /* r2 = r0 / 32 */
+
+    /* r0 = 1 << (r0 & 31) */
+    movs r3, #1        /* r3 = 1 */
+    and r0, r0, #31    /* r0 = r0 & 31 */
+    lsl r0, r3, r0     /* r0 = r3 << r0 */
+
+    /* r3 = &NVIC.ICER */
+    mov r3, #0xe180
+    movt r3, #0xe000
+
+    /* here:
+     *
+     *  `r2` is r0 / 32
+     *  `r3` is &NVIC.ICER
+     *  `r0` is 1 << (r0 & 31)
+     *
+     * So we just do:
+     *
+     *  `*(r3 + r2 * 4) = r0`
+     *
+     *  */
+    str r0, [r3, r2, lsl #2]"
+    );
+}
+
+#[naked]
+pub unsafe extern "C" fn enter_kernel_space() {
+    asm!(
+        "
+    /* Skip saving process state if not coming from user-space */
+    cmp lr, #0xfffffffd
+    bne 1f
+
+    /* We need the most recent kernel's version of r1, which points */
+    /* to the Process struct's stored registers field. The kernel's r1 */
+    /* lives in the second word of the hardware stacked registers on MSP */
+    mov r1, sp
+    ldr r1, [r1, #4]
+    stmia r1, {r4-r11}
+
+    /* Set thread mode to privileged */
+    mov r0, #0
+    msr CONTROL, r0
+
+    movw LR, #0xFFF9
+    movt LR, #0xFFFF
+  1:
+    "
+    );
+}
+
+#[naked]
+pub unsafe extern "C" fn disable_specific_nvic() {
+    asm!(
+        "
     /* Find the ISR number by looking at the low byte of the IPSR registers */
     mrs r0, IPSR
     and r0, #0xff
