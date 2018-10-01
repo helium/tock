@@ -5,6 +5,9 @@ use kernel::common::registers::{ReadOnly, ReadWrite, WriteOnly};
 use kernel::common::StaticRef;
 use kernel::hil::uart;
 use kernel::ReturnCode;
+
+use cortexm4::nvic;
+use peripheral_interrupts;
 use prcm;
 
 const MCU_CLOCK: u32 = 48_000_000;
@@ -28,8 +31,8 @@ struct UartRegisters {
     dmactl: ReadWrite<u32>,
 }
 
-pub static mut UART0: UART = UART::new(&UART0_BASE);
-pub static mut UART1: UART = UART::new(&UART1_BASE);
+pub static mut UART0: UART = UART::new(&UART0_BASE, &UART0_NVIC);
+pub static mut UART1: UART = UART::new(&UART1_BASE, &UART1_NVIC);
 
 register_bitfields![
     u32,
@@ -86,6 +89,9 @@ const UART0_BASE: StaticRef<UartRegisters> =
 const UART1_BASE: StaticRef<UartRegisters> =
     unsafe { StaticRef::new(0x4000B000 as *const UartRegisters) };
 
+pub static UART0_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART0) };
+pub static UART1_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART1) };
+
 /// Stores an ongoing TX transaction
 struct Transaction {
     /// The buffer containing the bytes to transmit as it should be returned to
@@ -99,15 +105,17 @@ struct Transaction {
 
 pub struct UART {
     registers: &'static StaticRef<UartRegisters>,
+    nvic: &'static nvic::Nvic,
     client: OptionalCell<&'static uart::Client>,
     tx: MapCell<Transaction>,
     rx: MapCell<Transaction>,
 }
 
 impl UART {
-    const fn new(registers: &'static StaticRef<UartRegisters>) -> UART {
+    const fn new(registers: &'static StaticRef<UartRegisters>, nvic: &'static nvic::Nvic) -> UART {
         UART {
             registers,
+            nvic,
             client: OptionalCell::empty(),
             tx: MapCell::empty(),
             rx: MapCell::empty(),
@@ -238,6 +246,8 @@ impl UART {
                 self.tx.put(tx);
             }
         });
+        self.nvic.clear_pending();
+        self.nvic.enable();
     }
 
     // Pushes a byte into the TX FIFO.

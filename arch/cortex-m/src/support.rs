@@ -48,8 +48,7 @@ where
 }
 
 #[cfg(target_os = "none")]
-pub unsafe fn atomic_write(location: &mut u64, value: u64 )
-{
+pub unsafe fn atomic_write(location: &mut u64, value: u64) {
     // Set PRIMASK
     asm!("cpsid i" :::: "volatile");
     *location = value;
@@ -58,10 +57,9 @@ pub unsafe fn atomic_write(location: &mut u64, value: u64 )
 }
 
 #[cfg(target_os = "none")]
-pub unsafe fn atomic_read(location: &u64) -> u64
-{
+pub unsafe fn atomic_read(location: &u64) -> u64 {
     let ret;
-    // Set PRIMASK  
+    // Set PRIMASK
     asm!("cpsid i" :::: "volatile");
     ret = *location;
     // Unset PRIMASK
