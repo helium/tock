@@ -1,8 +1,9 @@
 use cortexm4::{self, nvic};
+use events;
+use events::EVENT_PRIORITY;
 use gpio;
 use i2c;
 use kernel;
-use peripheral_interrupts;
 use rtc;
 use uart;
 
@@ -34,20 +35,17 @@ impl kernel::Chip for Cc26X2 {
     }
     fn service_pending_interrupts(&mut self) {
         unsafe {
-            while let Some(interrupt) = nvic::next_pending() {
-                match interrupt {
-                    peripheral_interrupts::GPIO => gpio::PORT.handle_interrupt(),
-                    peripheral_interrupts::AON_RTC => rtc::RTC.handle_interrupt(),
-                    peripheral_interrupts::UART0 => uart::UART0.handle_interrupt(),
-                    peripheral_interrupts::I2C => i2c::I2C0.handle_interrupt(),
-                    // AON Programmable interrupt
-                    // We need to ignore JTAG events since some debuggers emit these
-                    peripheral_interrupts::AON_PROG => (),
-                    _ => panic!("unhandled interrupt {}", interrupt),
+            while let Some(event) = events::next_pending() {
+                events::clear_event_flag(event);
+                match event {
+                    EVENT_PRIORITY::GPIO => gpio::PORT.handle_events(),
+                    EVENT_PRIORITY::AON_RTC => rtc::RTC.handle_events(),
+                    EVENT_PRIORITY::I2C0 => i2c::I2C0.handle_events(),
+                    EVENT_PRIORITY::UART0 => uart::UART0.handle_events(),
+                    EVENT_PRIORITY::UART1 => uart::UART1.handle_events(),
+                    EVENT_PRIORITY::AON_PROG => (),
+                    _ => panic!("unhandled event {:?} ", event),
                 }
-                let n = nvic::Nvic::new(interrupt);
-                n.clear_pending();
-                n.enable();
             }
         }
     }

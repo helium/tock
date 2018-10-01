@@ -59,15 +59,20 @@ pub unsafe extern "C" fn systick_handler() {
 #[cfg(not(target_os = "none"))]
 pub unsafe extern "C" fn generic_isr() {}
 
-#[cfg(target_os = "none")]
-#[naked]
 /// All ISRs are caught by this handler which disables the NVIC and switches to the kernel.
+#[naked]
 pub unsafe extern "C" fn generic_isr() {
+    enter_kernel_space();
+    disable_specific_nvic();
+}
+
+#[naked]
+pub unsafe extern "C" fn enter_kernel_space() {
     asm!(
         "
     /* Skip saving process state if not coming from user-space */
     cmp lr, #0xfffffffd
-    bne _ggeneric_isr_no_stacking
+    bne 1f
 
     /* We need the most recent kernel's version of r1, which points */
     /* to the Process struct's stored registers field. The kernel's r1 */
@@ -82,7 +87,15 @@ pub unsafe extern "C" fn generic_isr() {
 
     movw LR, #0xFFF9
     movt LR, #0xFFFF
-  _ggeneric_isr_no_stacking:
+  1:
+    "
+    );
+}
+
+#[naked]
+pub unsafe extern "C" fn disable_specific_nvic() {
+    asm!(
+        "
     /* Find the ISR number by looking at the low byte of the IPSR registers */
     mrs r0, IPSR
     and r0, #0xff
@@ -253,43 +266,43 @@ pub unsafe extern "C" fn hard_fault_handler() {
         let exception_number = (stacked_xpsr & 0x1ff) as usize;
 
         panic!(
-            "{} HardFault.\n\
-             \tKernel version {}\n\
-             \tr0  0x{:x}\n\
-             \tr1  0x{:x}\n\
-             \tr2  0x{:x}\n\
-             \tr3  0x{:x}\n\
-             \tr12 0x{:x}\n\
-             \tlr  0x{:x}\n\
-             \tpc  0x{:x}\n\
-             \tprs 0x{:x} [ N {} Z {} C {} V {} Q {} GE {}{}{}{} ; ICI.IT {} T {} ; Exc {}-{} ]\n\
-             \tsp  0x{:x}\n\
-             \ttop of stack     0x{:x}\n\
-             \tbottom of stack  0x{:x}\n\
-             \tSHCSR 0x{:x}\n\
-             \tCFSR  0x{:x}\n\
-             \tHSFR  0x{:x}\n\
-             \tInstruction Access Violation:       {}\n\
-             \tData Access Violation:              {}\n\
-             \tMemory Management Unstacking Fault: {}\n\
-             \tMemory Management Stacking Fault:   {}\n\
-             \tMemory Management Lazy FP Fault:    {}\n\
-             \tInstruction Bus Error:              {}\n\
-             \tPrecise Data Bus Error:             {}\n\
-             \tImprecise Data Bus Error:           {}\n\
-             \tBus Unstacking Fault:               {}\n\
-             \tBus Stacking Fault:                 {}\n\
-             \tBus Lazy FP Fault:                  {}\n\
-             \tUndefined Instruction Usage Fault:  {}\n\
-             \tInvalid State Usage Fault:          {}\n\
-             \tInvalid PC Load Usage Fault:        {}\n\
-             \tNo Coprocessor Usage Fault:         {}\n\
-             \tUnaligned Access Usage Fault:       {}\n\
-             \tDivide By Zero:                     {}\n\
-             \tBus Fault on Vector Table Read:     {}\n\
-             \tForced Hard Fault:                  {}\n\
-             \tFaulting Memory Address: (valid: {}) {:#010X}\n\
-             \tBus Fault Address:       (valid: {}) {:#010X}\n\
+            "{} HardFault.\r\n\
+             \tKernel version {}\r\n\
+             \tr0  0x{:x}\r\n\
+             \tr1  0x{:x}\r\n\
+             \tr2  0x{:x}\r\n\
+             \tr3  0x{:x}\r\n\
+             \tr12 0x{:x}\r\n\
+             \tlr  0x{:x}\r\n\
+             \tpc  0x{:x}\r\n\
+             \tprs 0x{:x} [ N {} Z {} C {} V {} Q {} GE {}{}{}{} ; ICI.IT {} T {} ; Exc {}-{} ]\r\n\
+             \tsp  0x{:x}\r\n\
+             \ttop of stack     0x{:x}\r\n\
+             \tbottom of stack  0x{:x}\r\n\
+             \tSHCSR 0x{:x}\r\n\
+             \tCFSR  0x{:x}\r\n\
+             \tHSFR  0x{:x}\r\n\
+             \tInstruction Access Violation:       {}\r\n\
+             \tData Access Violation:              {}\r\n\
+             \tMemory Management Unstacking Fault: {}\r\n\
+             \tMemory Management Stacking Fault:   {}\r\n\
+             \tMemory Management Lazy FP Fault:    {}\r\n\
+             \tInstruction Bus Error:              {}\r\n\
+             \tPrecise Data Bus Error:             {}\r\n\
+             \tImprecise Data Bus Error:           {}\r\n\
+             \tBus Unstacking Fault:               {}\r\n\
+             \tBus Stacking Fault:                 {}\r\n\
+             \tBus Lazy FP Fault:                  {}\r\n\
+             \tUndefined Instruction Usage Fault:  {}\r\n\
+             \tInvalid State Usage Fault:          {}\r\n\
+             \tInvalid PC Load Usage Fault:        {}\r\n\
+             \tNo Coprocessor Usage Fault:         {}\r\n\
+             \tUnaligned Access Usage Fault:       {}\r\n\
+             \tDivide By Zero:                     {}\r\n\
+             \tBus Fault on Vector Table Read:     {}\r\n\
+             \tForced Hard Fault:                  {}\r\n\
+             \tFaulting Memory Address: (valid: {}) {:#010X}\r\n\
+             \tBus Fault Address:       (valid: {}) {:#010X}\r\n\
              ",
             mode_str,
             env!("TOCK_KERNEL_VERSION"),

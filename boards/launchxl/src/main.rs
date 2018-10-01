@@ -22,6 +22,8 @@ pub mod io;
 
 #[allow(dead_code)]
 mod i2c_tests;
+#[allow(dead_code)]
+mod uart_echo;
 
 // How should the kernel respond when a process faults.
 const FAULT_RESPONSE: kernel::procs::FaultResponse = kernel::procs::FaultResponse::Panic;
@@ -284,6 +286,16 @@ pub unsafe fn reset_handler() {
     );
     kernel::debug::set_debug_writer_wrapper(debug_wrapper);
 
+    // Create a virtual device for echo test
+    let echo_uart = static_init!(UartDevice, UartDevice::new(uart_mux, true));
+    echo_uart.setup();
+    let echo = static_init!(
+        uart_echo::UartEcho<UartDevice>,
+        uart_echo::UartEcho::new(echo_uart, &mut uart_echo::OUT_BUF, &mut uart_echo::IN_BUF,)
+    );
+    hil::uart::UART::set_client(echo_uart, echo);
+    echo.initialize();
+
     // TODO(alevy): Enable I2C, but it's not used anywhere yet. We need a system
     // call driver
     cc26x2::i2c::I2C0.initialize();
@@ -360,7 +372,7 @@ pub unsafe fn reset_handler() {
     }
 
     let ipc = &kernel::ipc::IPC::new(board_kernel, &memory_allocation_capability);
-
+    //debug!("Loading processes");
     kernel::procs::load_processes(
         board_kernel,
         &cortexm4::syscall::SysCall::new(),

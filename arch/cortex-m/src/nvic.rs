@@ -67,7 +67,6 @@ pub unsafe fn next_pending() -> Option<u32> {
 
 pub unsafe fn has_pending() -> bool {
     let nvic: &NvicRegisters = &*NVIC_BASE_ADDRESS;
-
     nvic.ispr.iter().fold(0, |i, ispr| ispr.get() | i) != 0
 }
 

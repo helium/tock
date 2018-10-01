@@ -1,0 +1,58 @@
+[[package]]
+name = "cc26x2"
+version = "0.1.0"
+dependencies = [
+ "cortexm 0.1.0",
+ "cortexm4 0.1.0",
+ "enum_primitive 0.1.1 (git+https://github.com/lthiery/enum_primitive-rs)",
+ "kernel 0.1.0",
+ "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "cortexm"
+version = "0.1.0"
+dependencies = [
+ "kernel 0.1.0",
+]
+
+[[package]]
+name = "cortexm4"
+version = "0.1.0"
+dependencies = [
+ "cortexm 0.1.0",
+ "kernel 0.1.0",
+]
+
+[[package]]
+name = "enum_primitive"
+version = "0.1.1"
+source = "git+https://github.com/lthiery/enum_primitive-rs#78f84d0c972bec1069e85033c4d1aa4b40780ddb"
+dependencies = [
+ "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "kernel"
+version = "0.1.0"
+dependencies = [
+ "tock-cells 0.1.0",
+ "tock-registers 0.2.0",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "tock-cells"
+version = "0.1.0"
+
+[[package]]
+name = "tock-registers"
+version = "0.2.0"
+
+[metadata]
+"checksum enum_primitive 0.1.1 (git+https://github.com/lthiery/enum_primitive-rs)" = "<none>"
+"checksum num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3a5d7cc97d6d30d8b9bc8fa19bf45349ffe46241e8816f50f62f6d6aaabee1"
