@@ -89,8 +89,8 @@ const UART0_BASE: StaticRef<UartRegisters> =
 const UART1_BASE: StaticRef<UartRegisters> =
     unsafe { StaticRef::new(0x4000B000 as *const UartRegisters) };
 
-pub static UART0_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART0) };
-pub static UART1_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART1) };
+const UART0_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART0) };
+const UART1_NVIC: nvic::Nvic = unsafe { nvic::Nvic::new(peripheral_interrupts::UART1) };
 
 /// Stores an ongoing TX transaction
 struct Transaction {
@@ -110,6 +110,40 @@ pub struct UART {
     tx: MapCell<Transaction>,
     rx: MapCell<Transaction>,
 }
+
+macro_rules! uart_nvic {
+    ($fn_name:tt, $uart:ident) => {
+        // handle RX interrupt
+        pub extern "C" fn $fn_name() {
+            unsafe {
+                // handle RX
+                $uart.rx.map(|rx| {
+                    while $uart.rx_fifo_not_empty() && rx.index < rx.length {
+                        let byte = $uart.read_byte();
+                        rx.buffer[rx.index] = byte;
+                        rx.index += 1;
+                    }
+                });
+                // if there is no client, empty the buffer into the void
+                if $uart.rx_fifo_not_empty() {
+                    $uart.read_byte();
+                }
+                $uart.tx.map(|tx| {
+                    // if a big buffer was given, this could be a very long call
+                    if $uart.tx_fifo_not_full() && tx.index < tx.length {
+                        $uart.send_byte(tx.buffer[tx.index]);
+                        tx.index += 1;
+                    }
+                });
+                $uart.registers.icr.write(Interrupts::ALL_INTERRUPTS::Set);
+                $uart.nvic.clear_pending();
+            }
+        }
+    };
+}
+
+uart_nvic!(uart0_isr, UART0);
+uart_nvic!(uart1_isr, UART1);
 
 impl UART {
     const fn new(registers: &'static StaticRef<UartRegisters>, nvic: &'static nvic::Nvic) -> UART {
@@ -204,17 +238,11 @@ impl UART {
     }
 
     /// Clears all interrupts related to UART.
-    pub fn handle_interrupt(&self) {
+    pub fn handle_events(&self) {
         // Clear interrupts
         self.registers.icr.write(Interrupts::ALL_INTERRUPTS::SET);
 
         self.rx.take().map(|mut rx| {
-            while self.rx_fifo_not_empty() && rx.index < rx.length {
-                let byte = self.read_byte();
-                rx.buffer[rx.index] = byte;
-                rx.index += 1;
-            }
-
             if rx.index == rx.length {
                 self.client.map(move |client| {
                     client.receive_complete(
@@ -233,11 +261,6 @@ impl UART {
         }
 
         self.tx.take().map(|mut tx| {
-            // if a big buffer was given, this could be a very long call
-            if self.tx_fifo_not_full() && tx.index < tx.length {
-                self.send_byte(tx.buffer[tx.index]);
-                tx.index += 1;
-            }
             if tx.index == tx.length {
                 self.client.map(move |client| {
                     client.transmit_complete(tx.buffer, kernel::hil::uart::Error::CommandComplete);

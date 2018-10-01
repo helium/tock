@@ -35,20 +35,12 @@ pub fn next_pending() -> Option<EVENT_PRIORITY> {
     None
 }
 
-// #[inline]
-// pub fn set_event_flag(priority: EVENT_PRIORITY) {
-//     unsafe {
-//         let mut val = atomic_read(&EVENTS);
-//         val |= 0b1 << (priority as u8) as u64;
-//         atomic_write(&mut EVENTS, val);
-//     };
-// }
-
 #[inline]
 pub fn set_event_flag(priority: EVENT_PRIORITY) {
     unsafe {
-        //TODO: don't get interrupted
-        EVENTS |= 0b1 << (priority as u8) as u64;
+        let mut val = atomic_read(&EVENTS);
+        val |= 0b1 << (priority as u8) as u64;
+        atomic_write(&mut EVENTS, val);
     };
 }
 
