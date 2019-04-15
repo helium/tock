@@ -192,6 +192,13 @@ pub enum RfcInterrupt {
     Hardware,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum RfcState {
+    Idle,
+    Active,
+    Inactive,
+}
+
 pub struct RFCore {
     dbell_regs: StaticRef<RfcDBellRegisters>,
     pwc_regs: StaticRef<RfcPWCRegisters>,
@@ -199,7 +206,7 @@ pub struct RFCore {
     pub mode: Cell<Option<RfcMode>>,
     pub rat: Cell<u32>,
     pub status: Cell<u32>,
-    pub ack_status: Cell<u32>,
+    pub rfc_state: Cell<RfcState>,
     ack_nvic: &'static nvic::Nvic,
     cpe0_nvic: &'static nvic::Nvic,
     cpe1_nvic: &'static nvic::Nvic,
@@ -218,7 +225,7 @@ impl RFCore {
             mode: Cell::new(None),
             rat: Cell::new(0),
             status: Cell::new(0),
-            ack_status: Cell::new(0),
+            rfc_state: Cell::new(RfcState::Inactive),
             ack_nvic,
             cpe0_nvic,
             cpe1_nvic,
@@ -267,7 +274,6 @@ impl RFCore {
         // Clear ack flag
         dbell_regs.rfhw_ifg.set(0);
         dbell_regs.rfack_ifg.set(0);
-        self.ack_status.set(0x00);
         // Enable interrupts and clear flags
         dbell_regs
             .rfcpe_isl
@@ -297,6 +303,7 @@ impl RFCore {
         // Ping radio module
         let cmd_ping = cmd::DirectCommand::new(cmd::RFC_PING, 0);
         self.send_direct(&cmd_ping).ok();
+        self.rfc_state.set(RfcState::Idle);
     }
 
     // Disable RFCore

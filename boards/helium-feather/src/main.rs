@@ -70,7 +70,10 @@ pub struct Platform {
     rng: &'static capsules::rng::RngDriver<'static>,
     i2c_master: &'static capsules::i2c_master::I2CMasterDriver<cc26x2::i2c::I2CMaster<'static>>,
     gps: &'static capsules::gps::Gps<'static>,
-    helium: &'static capsules::helium::driver::Helium<'static>,
+    helium: &'static capsules::helium::driver::Helium<
+        'static,
+        capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+    >,
     ipc: kernel::ipc::IPC,
 }
 
@@ -390,6 +393,11 @@ pub unsafe fn reset_handler() {
     );
     virtual_alarm1.set_client(alarm);
 
+    let virtual_radio_alarm = static_init!(
+        capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+        capsules::virtual_alarm::VirtualMuxAlarm::new(mux_alarm)
+    );
+
     let entropy_to_random = static_init!(
         capsules::rng::Entropy32ToRandom<'static>,
         capsules::rng::Entropy32ToRandom::new(&cc26x2::trng::TRNG)
@@ -451,12 +459,16 @@ pub unsafe fn reset_handler() {
 
     // Driver for user to interface with
     let radio_driver = static_init!(
-        helium::driver::Helium<'static>,
+        helium::driver::Helium<
+            'static,
+            capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+        >,
         helium::driver::Helium::new(
             board_kernel.create_grant(&memory_allocation_capability),
             &mut HELIUM_BUF,
             virtual_device,
             fcfg1::FCFG1.get_device_mac_0(),
+            virtual_radio_alarm,
         )
     );
 

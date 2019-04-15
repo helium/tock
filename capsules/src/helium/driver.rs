@@ -1,7 +1,9 @@
 use crate::enum_primitive::cast::FromPrimitive;
-use crate::helium::{device, framer::PayloadType};
+use crate::helium::{channels::RadioChannel, device, framer::PayloadType};
+use core::cell::Cell;
 use core::cmp::min;
 use kernel::common::cells::{OptionalCell, TakeCell};
+use kernel::hil::time::Frequency;
 use kernel::{AppId, AppSlice, Callback, Driver, Grant, ReturnCode, Shared};
 
 // Syscall number
@@ -14,6 +16,37 @@ pub enum PowerMode {
     DeepSleep,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HeliumState {
+    NotInitialized,
+    Initialized,
+    TransmitIdle,
+    Transmit(RadioChannel),
+    ReceiveIdle,
+    Receive(RadioChannel),
+}
+
+#[derive(Copy, Clone)]
+enum Expiration {
+    Disabled,
+    Abs(u32),
+}
+
+#[derive(Copy, Clone)]
+struct AlarmData {
+    t0: u32,
+    expiration: Expiration,
+}
+
+impl AlarmData {
+    fn new() -> AlarmData {
+        AlarmData {
+            t0: 0,
+            expiration: Expiration::Disabled,
+        }
+    }
+}
+
 // #[derive(Default)]
 #[allow(unused)]
 pub struct App {
@@ -23,8 +56,13 @@ pub struct App {
     app_write: Option<AppSlice<Shared, u8>>,
     app_read: Option<AppSlice<Shared, u8>>,
     pending_tx: Option<(u8, Option<PayloadType>)>, // Change u32 to keyid and fec mode later on during implementation
-    tx_interval_ms: u32,                           // 400 ms is maximum per FCC
-                                                   // random_nonce: u32, // Randomness to sending interval to reduce collissions
+    tx_interval_ms: u32,
+
+    process_status: Option<HeliumState>,
+    alarm_data: AlarmData,
+
+    // 400 ms is maximum per FCC
+    random_nonce: u32, // Randomness to sending interval to reduce collissions
 }
 
 impl Default for App {
@@ -37,32 +75,86 @@ impl Default for App {
             app_read: None,
             pending_tx: None,
             tx_interval_ms: 400,
-            // random_nonce: 0xdeadbeef,
+            process_status: Some(HeliumState::NotInitialized),
+            alarm_data: AlarmData::new(),
+            random_nonce: 0xdeadbeef,
         }
     }
 }
 
-pub struct Helium<'a> {
+impl App {
+    fn random_nonce(&mut self) -> u32 {
+        let mut next_nonce = ::core::num::Wrapping(self.random_nonce);
+        next_nonce ^= next_nonce << 13;
+        next_nonce ^= next_nonce >> 17;
+        next_nonce ^= next_nonce << 5;
+        self.random_nonce = next_nonce.0;
+        self.random_nonce
+    }
+
+    // Set the next alarm for this app using the period and provided start time.
+    fn set_next_alarm<F: Frequency>(&mut self, now: u32) {
+        self.alarm_data.t0 = now;
+        let nonce = self.random_nonce() % 10;
+
+        let period_ms = (self.tx_interval_ms + nonce) * F::frequency() / 1000;
+        self.alarm_data.expiration = Expiration::Abs(now.wrapping_add(period_ms));
+    }
+}
+
+pub struct Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
     app: Grant<App>,
     kernel_tx: TakeCell<'static, [u8]>,
     current_app: OptionalCell<AppId>,
     device: &'a device::Device<'a>,
     device_id: u32,
+    alarm: &'a A,
+    busy: Cell<bool>,
 }
 
-impl Helium<'a> {
+impl<A> Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
     pub fn new(
         container: Grant<App>,
         tx_buf: &'static mut [u8],
         device: &'a device::Device<'a>,
         device_id: u32,
-    ) -> Helium<'a> {
+        alarm: &'a A,
+    ) -> Helium<'a, A> {
         Helium {
             app: container,
             kernel_tx: TakeCell::new(tx_buf),
             current_app: OptionalCell::empty(),
-            device: device,
+            device,
             device_id,
+            alarm,
+            busy: Cell::new(false),
+        }
+    }
+
+    fn reset_active_alarm(&self) {
+        let now = self.alarm.now();
+        let mut next_alarm = u32::max_value();
+        let mut next_dist = u32::max_value();
+        for app in self.app.iter() {
+            app.enter(|app, _| match app.alarm_data.expiration {
+                Expiration::Abs(exp) => {
+                    let t_dist = exp.wrapping_sub(now);
+                    if next_dist > t_dist {
+                        next_alarm = exp;
+                        next_dist = t_dist;
+                    }
+                }
+                Expiration::Disabled => {}
+            });
+        }
+        if next_alarm != u32::max_value() {
+            self.alarm.set_alarm(next_alarm);
         }
     }
 
@@ -223,7 +315,72 @@ impl Helium<'a> {
     }
 }
 
-impl Driver for Helium<'a> {
+// Timer alarm
+impl<'a, A> kernel::hil::time::Client for Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
+    // When an alarm is fired, we find which apps have expired timers. Expired
+    // timers indicate a desire to perform some operation (e.g. start an
+    // advertising or scanning event). We know which operation based on the
+    // current app's state.
+    //
+    // In case of collision---if there is already an event happening---we'll
+    // just delay the operation for next time and hope for the best. Since some
+    // randomness is added for each period in an app's timer, collisions should
+    // be rare in practice.
+    //
+    // TODO: perhaps break ties more fairly by prioritizing apps that have least
+    // recently performed an operation.
+    fn fired(&self) {
+        let now = self.alarm.now();
+
+        self.app.each(|app| {
+            if let Expiration::Abs(exp) = app.alarm_data.expiration {
+                let expired =
+                    now.wrapping_sub(app.alarm_data.t0) >= exp.wrapping_sub(app.alarm_data.t0);
+                if expired {
+                    if self.busy.get() {
+                        // The radio is currently busy, so we won't be able to start the
+                        // operation at the appropriate time. Instead, reschedule the
+                        // operation for later. This is _kind_ of simulating actual
+                        // on-air interference
+                        debug!("HELIUM: operation delayed for app {:?}", app.appid());
+                        app.set_next_alarm::<A::Frequency>(self.alarm.now());
+                        return;
+                    }
+
+                    app.alarm_data.expiration = Expiration::Disabled;
+
+                    match app.process_status {
+                        Some(HeliumState::TransmitIdle) => {
+                            self.busy.set(true);
+                            app.process_status =
+                                Some(HeliumState::Transmit(RadioChannel::Channel1));
+                            // hop channel
+                        }
+                        Some(HeliumState::ReceiveIdle) => {
+                            self.busy.set(true);
+                            app.process_status = Some(HeliumState::Receive(RadioChannel::Channel1));
+                            //self.receiving_app.set(app.appid());
+                        }
+                        _ => debug!(
+                            "app: {:?} \t invalid state {:?}",
+                            app.appid(),
+                            app.process_status
+                        ),
+                    }
+                }
+            }
+        });
+        self.reset_active_alarm();
+    }
+}
+
+impl<A> Driver for Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
     /// Setup buffers to read/write from.
     ///
     ///  `allow_num`
@@ -381,7 +538,10 @@ impl Driver for Helium<'a> {
     }
 }
 
-impl device::TxClient for Helium<'a> {
+impl<A> device::TxClient for Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
     fn transmit_event(&self, buf: &'static mut [u8], result: ReturnCode) {
         self.kernel_tx.replace(buf);
         self.current_app.take().map(|appid| {
@@ -395,7 +555,10 @@ impl device::TxClient for Helium<'a> {
     }
 }
 
-impl device::RxClient for Helium<'a> {
+impl<A> device::RxClient for Helium<'a, A>
+where
+    A: kernel::hil::time::Alarm,
+{
     fn receive_event<'b>(&self, buf: &'b [u8], data_offset: usize, data_len: usize) {
         self.app.each(|app| {
             app.app_read.take().as_mut().map(|rbuf| {

@@ -56,6 +56,277 @@
 // | 907.92032 | 0x038B   | 0xEB9A     |
 // | 907.96016 | 0x038B   | 0xF5CD     |
 
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum RadioChannel {
+    Channel0,
+    Channel1,
+    Channel2,
+    Channel3,
+    Channel4,
+    Channel5,
+    Channel6,
+    Channel7,
+    Channel8,
+    Channel9,
+    Channel10,
+    Channel11,
+    Channel12,
+    Channel13,
+    Channel14,
+    Channel15,
+    Channel16,
+    Channel17,
+    Channel18,
+    Channel19,
+    Channel20,
+    Channel21,
+    Channel22,
+    Channel23,
+    Channel24,
+    Channel25,
+    Channel26,
+    Channel27,
+    Channel28,
+    Channel29,
+    Channel30,
+    Channel31,
+    Channel32,
+    Channel33,
+    Channel34,
+    Channel35,
+    Channel36,
+    Channel37,
+    Channel38,
+    Channel39,
+    Channel40,
+    Channel41,
+    Channel42,
+    Channel43,
+    Channel44,
+    Channel45,
+    Channel46,
+    Channel47,
+    Channel48,
+    Channel49,
+    Channel50,
+    Channel51,
+}
+
+impl RadioChannel {
+    pub fn get_channel(&self) -> ChannelParams {
+        match *self {
+            RadioChannel::Channel0 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x000,
+            },
+            RadioChannel::Channel1 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x0A34,
+            },
+            RadioChannel::Channel2 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x1467,
+            },
+            RadioChannel::Channel3 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x1ECD,
+            },
+            RadioChannel::Channel4 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x2900,
+            },
+            RadioChannel::Channel5 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x3334,
+            },
+            RadioChannel::Channel6 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x3D67,
+            },
+            RadioChannel::Channel7 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x479A,
+            },
+            RadioChannel::Channel8 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x5200,
+            },
+            RadioChannel::Channel9 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x5C34,
+            },
+            RadioChannel::Channel10 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x6134,
+            },
+            RadioChannel::Channel11 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x6B9A,
+            },
+            RadioChannel::Channel12 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x75CD,
+            },
+            RadioChannel::Channel13 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x8000,
+            },
+            RadioChannel::Channel14 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x8A34,
+            },
+            RadioChannel::Channel15 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x8467,
+            },
+            RadioChannel::Channel16 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0x9ECD,
+            },
+            RadioChannel::Channel17 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xA900,
+            },
+            RadioChannel::Channel18 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xB334,
+            },
+            RadioChannel::Channel19 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xBD67,
+            },
+            RadioChannel::Channel20 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xC79A,
+            },
+            RadioChannel::Channel21 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xD200,
+            },
+            RadioChannel::Channel22 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xDC34,
+            },
+            RadioChannel::Channel23 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xE134,
+            },
+            RadioChannel::Channel24 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xEB9A,
+            },
+            RadioChannel::Channel25 => ChannelParams {
+                frequency: 0x038A,
+                fract_freq: 0xF5CD,
+            },
+            RadioChannel::Channel26 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x000,
+            },
+            RadioChannel::Channel27 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x0A34,
+            },
+            RadioChannel::Channel28 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x1467,
+            },
+            RadioChannel::Channel29 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x1ECD,
+            },
+            RadioChannel::Channel30 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x2900,
+            },
+            RadioChannel::Channel31 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x3334,
+            },
+            RadioChannel::Channel32 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x3D67,
+            },
+            RadioChannel::Channel33 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x479A,
+            },
+            RadioChannel::Channel34 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x5200,
+            },
+            RadioChannel::Channel35 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x5C34,
+            },
+            RadioChannel::Channel36 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x6134,
+            },
+            RadioChannel::Channel37 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x6B9A,
+            },
+            RadioChannel::Channel38 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x75CD,
+            },
+            RadioChannel::Channel39 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x8000,
+            },
+            RadioChannel::Channel40 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x8A34,
+            },
+            RadioChannel::Channel41 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x8467,
+            },
+            RadioChannel::Channel42 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0x9ECD,
+            },
+            RadioChannel::Channel43 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xA900,
+            },
+            RadioChannel::Channel44 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xB334,
+            },
+            RadioChannel::Channel45 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xBD67,
+            },
+            RadioChannel::Channel46 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xC79A,
+            },
+            RadioChannel::Channel47 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xD200,
+            },
+            RadioChannel::Channel48 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xDC34,
+            },
+            RadioChannel::Channel49 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xE134,
+            },
+            RadioChannel::Channel50 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xEB9A,
+            },
+            RadioChannel::Channel51 => ChannelParams {
+                frequency: 0x038B,
+                fract_freq: 0xF5CD,
+            },
+        }
+    }
+}
+
 pub const FREQ_DEVIATIONS: [u16; 26] = [
     0x0000, 0x0A34, 0x1467, 0x1ECD, 0x2900, 0x3334, 0x3D67, 0x479A, 0x5200, 0x5C34, 0x6134, 0x6B9A,
     0x75CD, 0x8000, 0x8A34, 0x8467, 0x9ECD, 0xA900, 0xB334, 0xBD67, 0xC79A, 0xD200, 0xDC34, 0xE134,
@@ -64,25 +335,6 @@ pub const FREQ_DEVIATIONS: [u16; 26] = [
 
 #[derive(Copy, Clone, Default)]
 pub struct ChannelParams {
-    pub center_frequency: u16,
     pub frequency: u16,
     pub fract_freq: u16,
-}
-
-impl ChannelParams {
-    pub fn new(cf: u16) -> ChannelParams {
-        ChannelParams {
-            center_frequency: cf,
-            frequency: 0,
-            fract_freq: 0,
-        }
-    }
-
-    pub fn hop(&self) -> ChannelParams {
-        ChannelParams {
-            center_frequency: self.center_frequency,
-            frequency: 0,
-            fract_freq: 0,
-        }
-    }
 }

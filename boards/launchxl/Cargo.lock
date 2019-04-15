@@ -21,6 +21,7 @@ dependencies = [
  "enum_primitive 0.1.0",
  "fixedvec 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "kernel 0.1.0",
+ "labrador-ldpc 1.0.0",
  "msg 0.2.0",
 ]
 
@@ -100,6 +101,10 @@ dependencies = [
  "tock-cells 0.1.0",
  "tock-registers 0.3.0",
 ]
+
+[[package]]
+name = "labrador-ldpc"
+version = "1.0.0"
 
 [[package]]
 name = "launchxl"

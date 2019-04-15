@@ -10,4 +10,4 @@ fixedvec = "0.2.3"
 msg = { path = "../libraries/caut-rust", default-features=false }
 cauterize = { path = "../libraries//caut-rust//cauterize", default-features=false }
 enum_primitive = { path = "../libraries/enum_primitive" }
-#labrador-ldpc = { path = "../libraries/labrador-ldpc" }
+labrador-ldpc = { path = "../libraries/labrador-ldpc" }

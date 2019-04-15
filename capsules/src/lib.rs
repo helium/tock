@@ -13,7 +13,7 @@ pub mod test;
 pub mod net;
 extern crate cauterize;
 extern crate fixedvec;
-//extern crate labrador_ldpc;
+extern crate labrador_ldpc;
 extern crate msg;
 
 pub mod adc;

@@ -1,6 +1,6 @@
 use crate::cauterize::{Cauterize, Encoder, Vector};
 use crate::helium::{device, virtual_rfcore};
-//use crate::labrador_ldpc::LDPCCode;
+use crate::labrador_ldpc::LDPCCode;
 use crate::msg;
 use core::cell::Cell;
 use kernel::common::cells::{MapCell, OptionalCell};
@@ -128,7 +128,7 @@ impl Frame {
 
         ReturnCode::SUCCESS
     }
-    /*
+
     pub fn frame_payload_ldpc(&mut self, payload: &[u8]) -> ReturnCode {
         let total_len = payload.len();
         if total_len > 240 {
@@ -156,7 +156,6 @@ impl Frame {
         self.info.header.data_len = self.buf.len();
         ReturnCode::SUCCESS
     }
-    */
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]

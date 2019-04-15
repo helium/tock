@@ -16,6 +16,7 @@ use capsules::helium::{device::Device, virtual_rfcore::RFCore};
 use capsules::virtual_uart::{MuxUart, UartDevice};
 use cc26x2::adc;
 use cc26x2::aon;
+use cc26x2::fcfg1;
 use cc26x2::osc;
 use cc26x2::prcm;
 use cc26x2::pwm;
@@ -73,7 +74,10 @@ pub struct Platform<'a> {
     rng: &'static capsules::rng::RngDriver<'static>,
     i2c_master: &'static capsules::i2c_master::I2CMasterDriver<cc26x2::i2c::I2CMaster<'static>>,
     adc: &'static capsules::adc::Adc<'static, cc26x2::adc::Adc>,
-    helium: &'static capsules::helium::driver::Helium<'static>,
+    helium: &'static capsules::helium::driver::Helium<
+        'static,
+        capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+    >,
     pwm: &'a capsules::pwm::Pwm<'a, cc26x2::pwm::Signal<'a>>,
     ipc: kernel::ipc::IPC,
 }
@@ -447,6 +451,12 @@ pub unsafe fn reset_handler() {
             board_kernel.create_grant(&memory_allocation_capability)
         )
     );
+
+    let virtual_radio_alarm = static_init!(
+        capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+        capsules::virtual_alarm::VirtualMuxAlarm::new(mux_alarm)
+    );
+
     virtual_alarm1.set_client(alarm);
 
     let entropy_to_random = static_init!(
@@ -496,12 +506,16 @@ pub unsafe fn reset_handler() {
 
     // Driver for user to interface with
     let radio_driver = static_init!(
-        helium::driver::Helium<'static>,
+        helium::driver::Helium<
+            'static,
+            capsules::virtual_alarm::VirtualMuxAlarm<'static, cc26x2::rtc::Rtc>,
+        >,
         helium::driver::Helium::new(
             board_kernel.create_grant(&memory_allocation_capability),
             &mut HELIUM_BUF,
             virtual_device,
-            chip_id,
+            fcfg1::FCFG1.get_device_mac_0(),
+            virtual_radio_alarm,
         )
     );
 
